@@ -1,0 +1,317 @@
+{
+  "name": "Appointment Booking Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a71e9dff-3044-4858-add9-c85b336f4f8a",
+      "name": "When chat message received",
+      "webhookId": "4b78fcf3-8dfc-4d1b-895e-16405935623f"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=\ntodays date is {{ $now }}\n\n# Role\nYou are an AI Scheduling Assistant with access to Google Calendar. Your job is to book, reschedule, or cancel appointments\naccording to the instructions and variables\nprovided.\n\n# Tools Available\n- Book Appointment: Book a new appointment\n- Get appointment: Retrieve an appointment (find by time)\n- Update appointment: Reschedule an appointment (find by time, update to new time)\n- Cancel appointment: Cancel an appointment (find by time, cancel)\n- Check Availability: Check availability in given time frame\n\n# Variables Provided\n- action: \"booking\", \"reschedule\", \"check availability\", or\n\"cancel\"\n\n- booking_time: The time for booking, cancellation, or the original time to be rescheduled (format: ISO 8601 or standard\ncalendar time)\n\n- reschedule_time: The new time to reschedule to (only\npresent if action = \"reschedule\")\n\n- availability_time: The time or time range to check for\navailability (only present if action = \"check availability\")\n\n\n\n\n# Variables to Identify from Chat\nIdentify the following from the user's request to determine how to use your tools:\n- action: Is the user trying to \"booking\", \"reschedule\", \"check availability\", or \"cancel\"?\n- booking_time: The time for booking, cancellation, or the original time to be rescheduled.\n- reschedule_time: The new time to reschedule to (only relevant if they are rescheduling).\n- availability_time: The time or time range to check for availability.\n\nIf the user has not provided enough information (e.g., they ask to book but don't give a time) politely ask them for the missing details before using your tools.\n\n# Instructions\n1. ** If 'action' is \"check availability\" :**\n- Use 'Check Availability' for the provided availability_time*\n- Report clearly whether the slot or range is available or not. If they asked what times are available, provide two time\nranges at different parts of the day, closest times possible. Eg, Monday between 10am and 1pm or Tuesday between 1pm and\n4pm.\n\n2. ** If 'action' is \"booking\" :**\n- Use 'Check Availability' for the requested\n\"booking_time*\n- If available, use 'Book Appointment' to book an appointment at 'booking_time *.\n- If not available, report: \"The requested time is not available. Please choose another time.\"\n\n\n3. ** If 'action' is \"cancel\" :**\n- Use 'Get Appointment' to find the appointment at\n\"booking_time*\n- If found, use 'Cancel Appointment' to cancel that appointment.\n- If not found, report: \"No appointment found at the specified time to cancel.\"\n\n4. ** If 'action' is \"reschedule\" :**\n- Use 'Get Appointment' to find the appointment at\n\"booking_time'.\n- If found, use 'Check Availability' for the desired reschedule_time*\n- If the new time is available, use 'Update Appointment' to move the appointment to 'reschedule_time*\n- If not available, report: \"The requested reschedule time is not available. Please choose anther time.\"\n- If original appointment not found, report: \"No appointment found at the specified time to reschedule.\"\n\n# Output\nAlways confirm the result of your action:\n- For bookings: \"Appointment successfully booked at [time].\"\n- For cancellations: \"Appointment at [time] cancelled.\"\n- For rescheduling: \"Appointment rescheduled from [booking_time] to [reschedule_time].\"\n- For errors: \"No appointment found at [booking_time] to [action].\"\n- For availability: \"The time slot at [availability_time] is available.\" or \"The time slot at [availability_time] is not\navailable.\"\n\n# Example Inputs & Expected Flows\n\n## Check Availability Example\n- action: \"check availability\"\n- availability_time: \"2025-05-23T10:00:00\"\n> Check if 10:00 AM is free, report result.\n\n## Book Example\n- action: \"booking\"\n- booking_time: \"2025-05-23T10:00: 00\"\nCheck availability, if available, book at 10:00 AM, confirm.\n\n## Cancel Example\n- action: \"cancel\"\n- booking_time: \"2025-05-23T10:00:00\"\n> Find appointment at 10:00 AM, cancel if found, confirm.\n\n## Reschedule Example\n- action: \"reschedule\"\n- booking_time: \"2025-05-23T10:00:00\"\n- reschedule_time: \"2025-05-23T11:30:00\" (if not provided, default check within next 3 days)\n> Find appointment at 10:00 AM, check availability at 11:30 AM, if free, move to 11:30 AM, confirm.\n\n# Tone\nKeep instructions, confirmations, and error messages clear and direct.\n\n# Notes\n- All timezones provided are Asia/Karachi timezone unless otherwise stated.\n- All bookings are 30 minutes unless otherwise stated\n- When checking availability, only check for times within the next 3 days or this week, unless otherwise stated.\n- Always check availability before booking or rescheduling.\n- Never modify or cancel an appointment unless you are sure you have identified the correct event."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        544,
+        0
+      ],
+      "id": "507eb571-efb4-442d-9a5f-c8c25c8b8944",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        224,
+        224
+      ],
+      "id": "e4cc29ef-49ec-4c67-a133-bfe3fdb166d9",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "CLD8gP5rn6umFBaT",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "shtalha636@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shtalha636@gmail.com"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        480,
+        224
+      ],
+      "id": "cf76655a-5e95-4a84-b56e-181e619186aa",
+      "name": "Book Appointment",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TCykXEToIKZwOgtH",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "calendar": {
+          "__rl": true,
+          "value": "shtalha636@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shtalha636@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "updateFields": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        608,
+        224
+      ],
+      "id": "13e891f8-0395-48f2-9854-a8efaa79e969",
+      "name": "Update Appointment",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TCykXEToIKZwOgtH",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "shtalha636@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shtalha636@gmail.com"
+        },
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('After', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Before', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        736,
+        224
+      ],
+      "id": "8a8f9afc-5ec0-42d5-bbe0-fbd5b0f871ba",
+      "name": "Get Appointment",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TCykXEToIKZwOgtH",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "shtalha636@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shtalha636@gmail.com"
+        },
+        "eventId": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Event_ID', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        864,
+        224
+      ],
+      "id": "7d029e48-0da7-496a-8024-c91c4518a622",
+      "name": "Cancel Appointment",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TCykXEToIKZwOgtH",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "value": "shtalha636@gmail.com",
+          "mode": "list",
+          "cachedResultName": "shtalha636@gmail.com"
+        },
+        "timeMin": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start_Time', ``, 'string') }}",
+        "timeMax": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End_Time', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        992,
+        224
+      ],
+      "id": "3a753c8e-8229-4152-989d-a8d5f07285f4",
+      "name": "Check Availability",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "TCykXEToIKZwOgtH",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        352,
+        224
+      ],
+      "id": "b761656a-c8a3-4554-8d6c-321fe0a7cfee",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Appointment": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Appointment": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Appointment": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cancel Appointment": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "898661f7-f8f4-492e-ae95-7877a87cb21d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1e390e8cae629b31d7ddda8813526c47cca9686cdc05adcf49b1652c851bbf79"
+  },
+  "nodeGroups": [],
+  "id": "HyoIsVQKZ29JTjnC",
+  "tags": []
+}
